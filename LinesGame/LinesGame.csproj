@@ -82,8 +82,8 @@
     <Compile Include="Model\Game.cs" />
     <Compile Include="Model\Utils.cs" />
     <Compile Include="ViewModel\GameFieldViewModel.cs" />
-    <Compile Include="ViewModel\SummaryTableViewModel.cs" />
-    <Compile Include="ViewModel\SummaryViewModel.cs" />
+    <Compile Include="ViewModel\RecordsTableViewModel.cs" />
+    <Compile Include="ViewModel\GameSummaryViewModel.cs" />
     <Compile Include="ViewModel\ViewModelBase.cs" />
     <Compile Include="View\GameField10x10View.xaml.cs">
       <DependentUpon>GameField10x10View.xaml</DependentUpon>

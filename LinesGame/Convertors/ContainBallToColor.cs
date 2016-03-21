@@ -16,26 +16,10 @@ namespace LinesGame.Convertors
     {
         public override object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            //if (value is Cell)
-            //{
-            //    Cell cell = (Cell)value;
-            //    if (cell.ContainBall)
-            //    {
-            //        return new SolidColorBrush(cell.CellColor);
-            //    }
-            //    else
-            //    {
-            //        return new SolidColorBrush(Colors.Transparent);
-            //    }
-            //}
-            //Color c;
             Color color = (Color)value;
             if (value is Color)
             {
-                //Color color = (Color)value;
                 SolidColorBrush brush = new SolidColorBrush(color);
-
-
 
                 var start = new GradientStop();
                 start.Offset = 0;

@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:p="clr-namespace:LinesGame.Properties"
         xmlns:converters="clr-namespace:LinesGame.Convertors"
-        Title="GameField" Height="600" Width="780" KeyDown="GameFieldWin10x10_KeyDown" Closing="GameField_Closing" ResizeMode="NoResize">
+        Title="Игровое поле 10х10" Height="600" Width="780" KeyDown="GameFieldWin10x10_KeyDown" Closing="GameField_Closing" ResizeMode="NoResize">
 
     <Window.Resources>
         <converters:ContainBallToColor x:Key="ContainBallToColor" />

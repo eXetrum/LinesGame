@@ -28,6 +28,8 @@ namespace LinesGame.Model
         private int maxcombo;
         // Очки
         private long score;
+        // Ник нейм игрока
+        private string nickname;
         
         // Конструктор по умолчанию
         public GameScore()
@@ -121,6 +123,16 @@ namespace LinesGame.Model
             {
                 score = value;
                 OnPropertyChanged("Score");
+            }
+        }
+
+        public string NickName
+        {
+            get { return nickname; }
+            set
+            {
+                nickname = value;
+                OnPropertyChanged("NickName");
             }
         }
 
