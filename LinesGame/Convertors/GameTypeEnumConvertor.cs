@@ -15,7 +15,7 @@ namespace LinesGame.Convertors
         {
             Console.WriteLine("Convert gametype enum ");
             string parameterString = parameter as string;
-            if (parameterString == null)
+            if (parameterString == null || value.Equals(false))
                 return DependencyProperty.UnsetValue;
 
             if (Enum.IsDefined(value.GetType(), value) == false)
@@ -30,7 +30,7 @@ namespace LinesGame.Convertors
         {
             Console.WriteLine("ConvertBack gametype enum ");
             string parameterString = parameter as string;
-            if (parameterString == null)
+            if (parameterString == null || value.Equals(false))
                 return DependencyProperty.UnsetValue;
 
             return Enum.Parse(targetType, parameterString);

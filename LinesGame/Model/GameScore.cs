@@ -1,55 +1,116 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Timers;
 using System.Windows;
+using System.Xml.Serialization;
 
 namespace LinesGame.Model
 {
+    [Serializable]
     public class GameScore : INotifyPropertyChanged
     {
-        private Timer timer;
-        private long seconds;
-        private int movescount;
+        // Дата игры
+        private DateTime gamedate;
+        // Тип игры (на время или количество ходов)
+        private Utils.GameType gametype;
+        // Тип поля
+        private Utils.FieldType fieldtype;
+        // Прошло времени
+        private long elapsedseconds;        
+        // Сделано ходов
+        private int elapsedmoves;        
+        // Максимальная серия линий полученная за ход
+        private int maxcombo;
+        // Очки
         private long score;
-
+        
+        // Конструктор по умолчанию
         public GameScore()
         {
-            timer = new Timer();
-            timer.Interval = 1000;
-            timer.Elapsed += timer_Elapsed;
-            seconds = 0;
-            movescount = 0;
-            score = 0;
+            gametype = Utils.GameType.LimitedTime;
+            fieldtype = Utils.FieldType.Field10x10;
+            Reset();
+        }
+        // Конструктор с параметрами
+        public GameScore(Utils.GameType gametype, Utils.FieldType fieldtype)
+        {
+            // Запоминаем тип игры
+            this.gametype = gametype;
+            // Тип поля
+            this.fieldtype = fieldtype;
+            // Сброс всех счетчиков
+            Reset();
         }
 
-        private void timer_Elapsed(object sender, ElapsedEventArgs e)
+        public DateTime GameDate
         {
-            ++seconds;
-            OnPropertyChanged("GameTime");
-            //Console.WriteLine(GameTime);
-        }
-
-        public TimeSpan GameTime
-        {
-            get { return TimeSpan.FromSeconds(seconds); }
+            get
+            {
+                return gamedate;
+            }
             set
-            { 
-                seconds = value.Seconds;
-                OnPropertyChanged("GameTime");
+            {
+                gamedate = value;
             }
         }
 
-        public int MovesCount 
+        public Utils.GameType GameType
         {
-            get { return movescount; }
+            get
+            {
+                return gametype;
+            }
+            set
+            {
+                gametype = value;
+            }
+        }
+
+        public Utils.FieldType FieldType
+        {
+            get { return fieldtype; }
+            set
+            {
+                fieldtype = value;
+                OnPropertyChanged("FieldType");
+            }
+        }
+
+        public long ElapsedSeconds
+        {
+            get { return elapsedseconds; }
+            set
+            {
+                elapsedseconds = value;
+                OnPropertyChanged("ElapsedSeconds");
+            }
+        }
+
+        public int ElapsedMoves
+        {
+            get { return elapsedmoves; }
             set 
             {
-                movescount = value;
-                OnPropertyChanged("MovesCount");
+                elapsedmoves = value;                
+                OnPropertyChanged("ElapsedMoves");
+            }
+        }
+
+        public int MaxCombo
+        {
+            get
+            {
+                return maxcombo;
+            }
+            set
+            {
+                maxcombo = value;
+                OnPropertyChanged("MaxCombo");
             }
         }
 
@@ -65,33 +126,59 @@ namespace LinesGame.Model
 
         public void Reset()
         {
-            timer.Stop();
-            timer.Dispose();
-            timer = new Timer();
-            timer.Interval = 1000;
-            timer.Elapsed += timer_Elapsed;
-            timer.Enabled = true;
-            timer.Start();
-
-            seconds = 0;
-            MovesCount = 0;
-            Score = 0;
-            GameTime = new TimeSpan(0);
+            // Запоминаем дату игры
+            gamedate = new DateTime(DateTime.Now.Ticks);
+            // Обнуляем все счетчики
+            ElapsedSeconds = 0;
+            ElapsedMoves = 0;
+            MaxCombo = 0;
+            Score = 0;            
         }
-
-        public void ResumeRecord()
+        // Сериализация объекта данных игры в xml файл
+        public static void SaveScore(GameScore serializableObject)
         {
-            timer.Enabled = true;
-            timer.Start();
+            string fileName = "Records/" + serializableObject.GameDate.ToString("dd-MM-yyyy HH-mm-ss") + ".xml";
+            // Создаем директорию Records если таковой еще нет
+            (new FileInfo(fileName)).Directory.Create();
+            // Проверим чтобы объект был передан
+            if (serializableObject == null) { return; }
+            // Проубем записать в файл
+            try
+            {
+                using (var stream = new FileStream(fileName, FileMode.Create))
+                {
+                    XmlSerializer serializer = new XmlSerializer(typeof(GameScore));
+                    serializer.Serialize(stream, serializableObject);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("SaveScore exception: " + ex.Message);
+            }
         }
-
-        public void StopRecord()
+        // Разбор xml файла и построение объекта GameScore
+        public static GameScore LoadScore(string fileName)
         {
-            timer.Stop();
-            timer.Enabled = false;
+            if (string.IsNullOrEmpty(fileName)) { return default(GameScore); }
+
+            GameScore objectOut = null;
+
+            try
+            {
+                using (var stream = new FileStream(fileName, FileMode.Open))
+                {
+                    XmlSerializer serializer = new XmlSerializer(typeof(GameScore));
+                    objectOut = (GameScore) serializer.Deserialize(stream);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("LoadScore exception: " + ex.Message);
+            }
+
+            return objectOut;
         }
-
-
+        // Реализация интерфейса INotifyPropertyChanged
         protected virtual void OnPropertyChanged(string propertyName)
         {
             if (PropertyChanged != null)

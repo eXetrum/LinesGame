@@ -14,7 +14,8 @@ namespace LinesGame.Convertors
         public override object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
             string parameterString = parameter as string;
-            if (parameterString == null)
+            Console.WriteLine("Convert fieldtype enum=" + parameterString);
+            if (parameterString == null || value.Equals(false))
                 return DependencyProperty.UnsetValue;
 
             if (Enum.IsDefined(value.GetType(), value) == false)
@@ -28,7 +29,8 @@ namespace LinesGame.Convertors
         public override object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         {
             string parameterString = parameter as string;
-            if (parameterString == null)
+            Console.WriteLine("ConvertBack fieldtype enum=" + parameterString);
+            if (parameterString == null || value.Equals(false))
                 return DependencyProperty.UnsetValue;
 
             return Enum.Parse(targetType, parameterString);

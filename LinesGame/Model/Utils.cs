@@ -8,6 +8,7 @@ using System.Windows;
 using System.Windows.Data;
 using System.Windows.Markup;
 using System.Windows.Media;
+using System.Xml.Serialization;
 
 namespace LinesGame.Model
 {
@@ -15,26 +16,26 @@ namespace LinesGame.Model
     {
         [Serializable]
         public enum FieldType
-        {
-            Field10x10,
-            Field20x20,
-            Field17x19,
+        {   
+            Field10x10,     // Поле 10х10 
+            Field20x20,     // Поле 20х20 
+            Field17x19,     // Поле 17х19
         }
 
         [Serializable]
         public enum SoundSettings
         {
-            Enabled,
-            Disabled
+            Enabled,        // Звук вкл
+            Disabled        // Звук выкл
         }
 
         [Serializable]
         public enum GameType
         {
-            LimitedTime,
-            LimitedMoves
+            LimitedTime,    // Режим ограниченного времени
+            LimitedMoves    // Режим ограниченного количества ходов
         }
-
+        // Возможные цвета шаров
         public static Color[] BallColors = new Color[] 
         {
             Colors.Red,

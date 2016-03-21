@@ -1,30 +1,67 @@
-﻿using System;
+﻿using LinesGame.Properties;
+using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Windows;
+using System.Timers;
 using System.Windows.Media;
-using System.Windows.Media.Animation;
 using System.Windows.Threading;
 
 namespace LinesGame.Model
 {
-    public class Game
+    public class Game : INotifyPropertyChanged
     {
-        private Field field;
-        private FieldSetup fieldsetup;
-        private GameScore score;
-        private bool running;
+        // Опишем делегат вызываемый по завершению игры
+        public delegate void OnGameOver();
+        // Создаем событие 
+        public event OnGameOver OnOver;
 
-        public Game(FieldSetup fieldsetup) {
-            this.fieldsetup = fieldsetup;
-            switch (fieldsetup.FieldType)
+        private const long gameMaxTime = 5 * 60;    // Максимальное время при режиме игры на время в секундах
+        private const int gameMaxMoves = 100;       // Максимальное количество ходов при режиме игры на количество ходов
+        // Игровой таймер
+        private DispatcherTimer timer;
+        // Осталось ходов/времени (игра на время / игра на количество ходов)
+        private long remain;
+        // Перечисление статусов игры
+        public enum GameStatus
+        {
+            PrepareOK,      // Игра готова к запуску
+            Running,        // Игра создана и запущена
+            Paused,         // Игра приостановлена
+            End             // Игра завершена
+        }
+        // Игровое поле
+        private Field field;
+        // Очки, время игры, ходы и т.д.
+        private GameScore gamescore;
+        // Текущий статус игры
+        private GameStatus gamestatus;
+        // Список линий полученных за один ход (серия линий)
+        private List<Line> moveCombo = new List<Line>();
+        // Конструктор
+        public Game() {
+            // Создаем объект хранящий и собирающий статистику
+            gamescore = new Model.GameScore(Settings.Default.GameType, Settings.Default.Field);
+            // Создаем игровой таймер
+            timer = new DispatcherTimer();
+            // Интервал в секунду
+            timer.Interval = TimeSpan.FromSeconds(1);
+            // Задаем обработчик при достижении очередного интервала
+            timer.Tick += timer_Tick;
+            // Если игра на время
+            if (gamescore.GameType == Utils.GameType.LimitedTime)
             {
-                case Utils.FieldType.Field10x10:
-                    field = new Field(10, 10);
-                    break;
+                // Задаем количество игровых секунд
+                remain = gameMaxTime;
+            }
+            else // Игра на количество ходов
+            {
+                remain = gameMaxMoves;
+            }
+            // На основе данных из настроек создаем поле соотв. размера
+            switch (Settings.Default.Field)
+            {
                 case Utils.FieldType.Field17x19:
                     field = new Field(17, 19);
                     break;
@@ -35,77 +72,158 @@ namespace LinesGame.Model
                     field = new Field(10, 10);
                     break;
             }
-
-            score = new Model.GameScore();
-
-
-
-
-            StartGame();
+            // Готовим поле к старту
+            PrepareGame();
         }
-
-        public Field Field
+        // Обработчик тиков таймера
+        void timer_Tick(object sender, EventArgs e)
         {
-            get { return field; }
-            set { field = value; }
+            // Увеличиваем счетчик прошедших секунд
+            ElapsedTime = TimeSpan.FromSeconds(ElapsedTime.Seconds + 1);
+            // Отнимаем от оставшегося времени если игра на время
+            if (_GameScore.GameType == Utils.GameType.LimitedTime)
+            {
+                --Remain;
+            }
+            // Отладочное сообщение в консоль
+            Console.WriteLine("elapsed=" + ElapsedTime + ", remain=" + remain);
+            // Достигли конца счетчика
+            if (remain == 0)                    
+            {
+                StopGame(); // Останавливаем игру  
+            }
         }
-
-        public FieldSetup FieldSetup
+        // Осталось ходов/времени
+        public long Remain
         {
-            get { return fieldsetup; }
-            set { fieldsetup = value; }
-        }
+            get { return remain; }
+            set
+            {
+                remain = value;
+                OnPropertyChanged("Remain");
+                OnPropertyChanged("Remained");
 
-        public GameScore Score
-        {
-            get { return score; }
-            set { score = value; }
+            }
         }
-
-        public bool Running
+        // Оставшееся время/количество ходов
+        public string Remained
         {
             get
             {
-                return running;
+                if (_GameScore.GameType == Utils.GameType.LimitedTime)
+                {
+                    return TimeSpan.FromSeconds(remain).ToString(@"hh\:mm\:ss");
+                }
+                else
+                {
+                    return remain.ToString();
+                }
+            }
+            set { }
+        }
+        // Прошло времени
+        public TimeSpan ElapsedTime
+        {
+            get { return TimeSpan.FromSeconds(_GameScore.ElapsedSeconds); }
+            set
+            {
+                _GameScore.ElapsedSeconds = value.Seconds;
+                OnPropertyChanged("ElapsedTime");
+            }
+        }
+        // Доступ к Полю
+        public Field Field
+        {
+            get { return field; }
+            set 
+            { 
+                field = value;
+                OnPropertyChanged("Field");
+            }
+        }
+        // Доступ к статистике
+        public GameScore _GameScore
+        {
+            get { return gamescore; }
+            set 
+            {
+                gamescore = value;
+                OnPropertyChanged("_GameScore");
+            }
+        }
+        // Доступ к текущему статусу игры
+        public GameStatus _GameStatus
+        {
+            get
+            {
+                return gamestatus;
             }
             set
             {
-                running = value;
+                gamestatus = value;
+                OnPropertyChanged("_GameStatus");
             }
         }
 
-        public void StartGame()
+        public void ClearCombo()
         {
+            moveCombo.Clear();
+        }
+        // Метод подготовки игры к старту но еще не старт
+        public void PrepareGame()
+        {
+            moveCombo = new List<Line>();
             // Готовим поле к началу
             do
             {
                 PrepareField();
             } while (!HasMoves()); // Допустимые ходы должны быть
-            // Обнуляем очки
-            score.Reset();
-            Running = true;
+            // Статус игры - готова к запуску
+            gamestatus = GameStatus.PrepareOK;
         }
-
+        // Метод запуска игры
+        public void StartGame()
+        {
+            // Обнуляем очки
+            gamescore.Reset();
+            // Запускаем таймер
+            timer.Start();
+            // Меняем статус игры на "Запущена"
+            _GameStatus = GameStatus.Running;
+        }
+        // Метод остановки игры
         public void StopGame()
         {
-            MessageBox.Show("ALLAH AKBAR");
-            Score.StopRecord();
-            Running = false;
+            Console.WriteLine("Game Over");
+            if (_GameStatus == GameStatus.End) return;
+            _GameStatus = GameStatus.End;
+            // Останавливаем таймер
+            timer.Stop();
+            // Если обработчик события задан            
+            if (OnOver != null)
+            {
+                Console.WriteLine("Game OnOver event raised");
+                // Вызываем
+                OnOver();                
+            }
         }
-
+        // Поставить игру на паузу
         public void PauseGame()
         {
-            Score.StopRecord();
-            Running = false;
+            // Останавливаем таймер
+            timer.Stop();
+            // Меняем статус игры
+            _GameStatus = GameStatus.Paused;
         }
-
+        // Снять с паузы и продолжить
         public void ResumeGame()
         {
-            Score.ResumeRecord();
-            Running = true;
+            // Запускаем таймер
+            timer.Start();
+            // Меняем статус игры на
+            _GameStatus = GameStatus.Running;
         }
-
-
+        // Проверяем поле на "не упавшие" шары (ситуация в которой пустые клетки под шарами а не на верху поля)
         public bool GravityRequire()
         {
             for (int j = 0; j < field.Columns; ++j)
@@ -114,79 +232,82 @@ namespace LinesGame.Model
                 int ball = -1;
                 for (int i = 0; i < field.Rows; ++i)
                 {
-                    if (empty == -1 && field[i * field.Columns + j].CellColor.Equals(Colors.Transparent))
-                    {
-                        empty = i;
-                    }
-                    if (ball == -1 && !field[i * field.Columns + j].CellColor.Equals(Colors.Transparent))
-                    {
-                        ball = i;
-                    }
+                    // Если нашли пустую клетку - запоминаем индекс клетки
+                    if (empty == -1 && field[i * field.Columns + j].CellColor.Equals(Colors.Transparent)) empty = i;
+                    // Если нашли клетку с шаром - запоминаем индекс клетки
+                    if (ball == -1 && !field[i * field.Columns + j].CellColor.Equals(Colors.Transparent)) ball = i;
+                    // Если индексы шара и пустой клетки уже определены - дальше продолжать не имеет смысла
                     if (empty != -1 && ball != -1) break;
                 }
                 //Console.WriteLine("Column=" + j + ", empty=" + empty + ", ball=" + ball);
-                // Если встретили при спуске по строке сначала шар а затем пустоую клетку - нужно включить гравитацию чтобы шары  упали вниз
+                // Если встретили при спуске по строке сначала шар а затем пустоую 
+                // клетку - нужно включить "гравитацию" чтобы шары упали вниз
                 if (ball < empty) return true;
             }
+            // В противном случае гравитация не нужна
             return false;
         }
-
+        // Проверка необходимости заполнения пустых клеток (ситуация при которой на поле могут образоваться пустые клетки)
         public bool FillEmptyRequire()
         {
             for (int j = 0; j < field.Columns; ++j)
             {
                 for (int i = 0; i < field.Rows; ++i)
                 {
+                    // Клетка не пустая (на клетке шар) - двигаемся к след ячейке
                     if (!field[i * field.Columns + j].CellColor.Equals(Colors.Transparent)) continue;
+                    // Иначе нужно заполнить пустоты
                     return true;
                 }
             }
             return false;
         }
-
-        public void ChekField() 
+        // Проверка поля на образование новых комбинаций линий после очередного хода (возможно была применена гравитация и образовались новые линии)
+        public void CheckField() 
         {
-            
-
-
-            List<Path> lines = GetLines();
+            moveCombo.Clear();
+            // Получаем список линий
+            List<Line> lines = GetLines();
+            // Если список пуст
             bool fieldComplete = lines.Count == 0;
+            // Если список не пуст
             while (!fieldComplete)
-            {
+            {               
+                // Убираем все линии с поля
                 foreach (var p in lines)
                 {
+                    if (!moveCombo.Contains(p)) moveCombo.Add(p);
+                    // Выводим в консоль отладочную запись
                     Console.WriteLine(p);
+                    // Убираем линию
                     RemoveLine(p);
-                    try
+                    // Если задано испольование звуков
+                    if(Settings.Default.Sound == Utils.SoundSettings.Enabled) 
                     {
-                        System.Media.SoundPlayer player = new System.Media.SoundPlayer(@"D:\test\lines\test_splash.wav");
-                        player.Play();
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine("Exception while sound play: " + ex.Message);
+                        // Проигрываем звук исчезновения линии
+                        try
+                        {
+                            System.Media.SoundPlayer player = new System.Media.SoundPlayer(@"Sound\disappear.wav");
+                            player.Play();
+                        }
+                        catch (Exception ex) { Console.WriteLine("Exception while sound play: " + ex.Message); }
                     }
                 }
-                // Опускаем все шары вниз (пустые клетки перемещаем вверх)
-                //MessageBox.Show("Fall down");
-                //BallsGravityDown();
-                //Thread.Sleep(1000);
-                // Заполняем пустые клетки новыми шарами
-                //MessageBox.Show("Fill empty");
-                //FillEmptyCells();
-                //Thread.Sleep(1000);
-                // Получаем комбинации линий
+                //if (Score.MaxCombo < curcombat) Score.MaxCombo = curcombat;
+                if (_GameScore.MaxCombo < moveCombo.Count) _GameScore.MaxCombo = moveCombo.Count;
+                // Получаем комбинации линий снова
                 lines = GetLines();
                 // Если комбинаций нет - подготовка окончена
                 fieldComplete = lines.Count == 0;
             }
+            // Если нет ходов - игра окончена
             if (!HasMoves())
             {
-                MessageBox.Show("GAME OVER");
-                Score.StopRecord();
+                Console.WriteLine("NO MORE MOVES, GAME OVER");
+                StopGame();
             }
         }
-
+        // Стартовая подготовка поля
         protected void PrepareField()
         {
             Random rnd = new Random(DateTime.Now.Millisecond);
@@ -194,30 +315,30 @@ namespace LinesGame.Model
             {
                 for (int j = 0; j < field.Columns; ++j)
                 {
-                    field[i * field.Columns + j].CellColor = Utils.BallColors[rnd.Next(fieldsetup.BallCount)];
-                    //field[i * field.Columns + j].ContainBall = true;
+                    // Выставляем на поле очередной шар случайного цвета (количество цветов берем из настроек)
+                    field[i * field.Columns + j].CellColor = Utils.BallColors[rnd.Next(Settings.Default.ColorCount)];
                 }
             }
-
-            List<Path> lines = GetLines();
+            // Получаем линии на поле (если при старте есть линии - убераем их до тех пор пока поле не будет содержать линий со старта)
+            List<Line> lines = GetLines();
             bool fieldComplete = lines.Count == 0;
             while (!fieldComplete)
             {
                 foreach (var p in lines)
                 {
                     Console.WriteLine(p);
-                    //RemoveLine(p);                    
-                }
-                //MessageBox.Show("next");
-                foreach (var p in lines)
-                {
-                    RemoveLine(p);                    
+                    //RemoveLine(p);
+                    // Обнуляем цвета на соответствующих линии клетках
+                    foreach (var pp in p.GetLine())
+                    {
+                        field[pp.X * field.Columns + pp.Y].CellColor = Colors.Transparent;
+                    }
                 }
                 // Опускаем все шары вниз (пустые клетки перемещаем вверх)
-                //MessageBox.Show("Fall down");
+                Console.WriteLine("Fall down");
                 BallsGravityDown();                
                 // Заполняем пустые клетки новыми шарами
-                //MessageBox.Show("Fill empty");
+                Console.WriteLine("Fill empty");
                 FillEmptyCells();                
                 // Получаем комбинации линий
                 lines = GetLines();
@@ -236,7 +357,7 @@ namespace LinesGame.Model
                 {
                     // Если клетка не пустая - пропускаем и переходим к след.
                     if (!field[i * field.Columns + j].CellColor.Equals(Colors.Transparent)) continue;
-                    field[i * field.Columns + j].CellColor = Utils.BallColors[rnd.Next(fieldsetup.BallCount)];
+                    field[i * field.Columns + j].CellColor = Utils.BallColors[rnd.Next(Settings.Default.ColorCount)];
                 }
             }
         }
@@ -264,30 +385,31 @@ namespace LinesGame.Model
             }
         }
         // Убрать линию из шаров с поля
-        void RemoveLine(Path path)
+        void RemoveLine(Line path)
         {
-            switch(path.GetPath().Count) 
+            if (_GameStatus == GameStatus.End) return;
+            // На основе длинны линии рассчитываем прибавку к очкам
+            switch(path.GetLine().Count) 
             {
                 case 3:
-                    score.Score += 300;
+                    gamescore.Score += 300;
                     break;
                 case 4:
-                    score.Score += 600;
+                    gamescore.Score += 600;
                     break;
                 case 5:
-                    score.Score += 1000;
+                    gamescore.Score += 1000;
                     break;
-                default:
-                    score.Score += path.GetPath().Count * 250;
+                default: // Для длин линий более 5 формула такая
+                    gamescore.Score += path.GetLine().Count * 250;
                     break;
             }
-
-            foreach(var p in path.GetPath()) 
+            // Обнуляем цвета на соответствующих линии клетках
+            foreach(var p in path.GetLine()) 
             {
                 field[p.X * field.Columns + p.Y].CellColor = Colors.Transparent;
             }
         }
-
         // Есть ли допустимые ходы
         public bool HasMoves()
         {
@@ -335,7 +457,7 @@ namespace LinesGame.Model
                     // Если нет шара в ячейке - не строим путь а переходим к след. ячейке
                     if (_field[i * _field.Columns + j].CellColor.Equals(Colors.Transparent)) continue;
                     Color color = _field[i * _field.Columns + j].CellColor;
-                    Path horizontal = new Path(color);
+                    Line horizontal = new Line(color);
                     horizontal.Add(new Point(i, j));
                     // Если справа есть еще шары и цвет совпадает с текущим - пробуем построить путь
                     while (j + 1 < _field.Columns && color.Equals(_field[i * _field.Columns + (j + 1)].CellColor))
@@ -343,7 +465,7 @@ namespace LinesGame.Model
                         ++j;
                         horizontal.Add(new Point(i, j));
                     }
-                    if (horizontal.GetPath().Count >= 3) { return true; }
+                    if (horizontal.GetLine().Count >= 3) { return true; }
                 }
             }
             // Vertical lines
@@ -353,7 +475,7 @@ namespace LinesGame.Model
                 {
                     if (_field[i * _field.Columns + j].CellColor.Equals(Colors.Transparent)) continue;
                     Color color = _field[i * _field.Columns + j].CellColor;
-                    Path vertical = new Path(color);
+                    Line vertical = new Line(color);
                     vertical.Add(new Point(i, j));
                     // Если снизу есть еще шары и цвет совпадает с текущим - пробуем построить путь
                     while (i + 1 < _field.Rows && color.Equals(_field[(i + 1) * _field.Columns + j].CellColor))
@@ -361,16 +483,16 @@ namespace LinesGame.Model
                         ++i;
                         vertical.Add(new Point(i, j));
                     }
-                    if (vertical.GetPath().Count >= 3) { return true; }
+                    if (vertical.GetLine().Count >= 3) { return true; }
                 }
             }
 
             return false;
         }
-
-        public List<Path> GetLines()
+        // Получить список линий на поле из шаров одинаковых цветов
+        protected List<Line> GetLines()
         {
-            List<Path> lines = new List<Path>();
+            List<Line> lines = new List<Line>();
 
             for (int i = 0; i < field.Rows; ++i)
             {
@@ -380,7 +502,7 @@ namespace LinesGame.Model
                     if (field[i * field.Columns + j].CellColor.Equals(Colors.Transparent)) continue;
 
                     Color color = field[i * field.Columns + j].CellColor;
-                    Path horizontal = new Path(color);
+                    Line horizontal = new Line(color);
                     horizontal.Add(new Point(i, j));
                     // Если справа есть еще шары и цвет совпадает с текущим - пробуем построить путь
                     while (j + 1 < field.Columns && color.Equals(field[i * field.Columns + (j + 1)].CellColor))
@@ -388,7 +510,7 @@ namespace LinesGame.Model
                         ++j;
                         horizontal.Add(new Point(i, j));
                     }
-                    if (horizontal.GetPath().Count >= 3)
+                    if (horizontal.GetLine().Count >= 3)
                     {
                         if (!lines.Contains(horizontal))
                         {
@@ -404,7 +526,7 @@ namespace LinesGame.Model
                 {
                     if (field[i * field.Columns + j].CellColor.Equals(Colors.Transparent)) continue;
                     Color color = field[i * field.Columns + j].CellColor;
-                    Path vertical = new Path(color);
+                    Line vertical = new Line(color);
                     vertical.Add(new Point(i, j));
                     // Если снизу есть еще шары и цвет совпадает с текущим - пробуем построить путь
                     while (i + 1 < field.Rows && color.Equals(field[(i + 1) * field.Columns + j].CellColor))
@@ -412,7 +534,7 @@ namespace LinesGame.Model
                         ++i;
                         vertical.Add(new Point(i, j));
                     }
-                    if (vertical.GetPath().Count >= 3)
+                    if (vertical.GetLine().Count >= 3)
                     {
                         if (!lines.Contains(vertical))
                         {
@@ -423,40 +545,30 @@ namespace LinesGame.Model
             }
             return lines;
         }
-
-        public class Point {
+        // Класс точка. Используем для хранения координат каждого шара внутри линии
+        protected class Point {
             private int x, y;
 
-            public Point(int x, int y)
-            {
-                this.x = x;
-                this.y = y;
-            }
-
-            public Point(Point other)
-            {
-                this.x = other.x;
-                this.y = other.y;
-            }
-
+            public Point(int x, int y) { this.x = x; this.y = y; }
+            public Point(Point other) { this.x = other.x; this.y = other.y; }
+            // Доступ к координатам
             public int X
             {
                 get { return x; }
                 set { x = value; }
             }
-            
             public int Y
             {
                 get { return y; }
                 set { y = value; }
             }
-
+            // Перегрузим вывод в строку (Используем для отладки)
             public override string ToString()
             {
                 string s = "{" + X + ", " + Y + "}";
                 return s;
             }
-
+            // Сравнение двух объектов типа Point
             public override bool Equals(object obj)
             {
                 if (obj == null) return false;
@@ -476,42 +588,42 @@ namespace LinesGame.Model
                 return this.x == other.x && this.y == other.y;
             }
         }
-
-        public class Path
+        // Линия из шаров
+        protected class Line
         {
-            List<Point> path;
+            // Список координат шаров линии
+            List<Point> line;
+            // Цвет линии
             Color color;
-            
-            public Path(Color color) 
+            //// Конструкторы ////
+            public Line(Color color) 
             {
                 this.color = color;
-                path = new List<Point>();
+                line = new List<Point>();
             }
-
-            public Path(Path other)
+            public Line(Line other)
             {
                 color = other.color;
-                path = new List<Point>();
-                path.AddRange(other.path);
-
+                line = new List<Point>();
+                line.AddRange(other.line);
             }
-
+            // Добавить координаты очередного шара
             public void Add(Point p) 
             {
-                path.Add(new Point(p));
+                line.Add(new Point(p));
             }
-
+            // Удалить последний добавленый
             public void RemoveLast() 
             {
-                path.RemoveAt(path.Count - 1);
+                line.RemoveAt(line.Count - 1);
             }
 
-            public List<Point> GetPath() { return path; }
+            public List<Point> GetLine() { return line; }
 
             public override int GetHashCode()
             {
                 int hash = 1;
-                foreach (var p in path)
+                foreach (var p in line)
                 {
                     hash ^= p.GetHashCode();
                 }
@@ -521,32 +633,43 @@ namespace LinesGame.Model
             public override bool Equals(object obj)
             {
                 if (obj == null) return false;
-                Path objAsPath = obj as Path;
+                Line objAsPath = obj as Line;
                 if (objAsPath == null) return false;
                 else return Equals(objAsPath);
             }
 
-            public bool Equals(Path p)
+            public bool Equals(Line p)
             {
                 if (p == null) return false;
                 if (!color.Equals(p.color)) return false;
 
-                foreach (var pp in path)
+                foreach (var pp in line)
                 {
-                    if (!p.path.Contains(pp)) return false;
+                    if (!p.line.Contains(pp)) return false;
                 }
                 return true;
             }
+
             public override string ToString()
             {
                 string s = string.Empty;
-                foreach (var p in path)
+                foreach (var p in line)
                 {
                     s += p;
                 }
                 return s;
             }
         }
+
+        protected virtual void OnPropertyChanged(string propertyName)
+        {
+            if (PropertyChanged != null)
+            {
+                PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
+            }
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged;
     }
     
 }

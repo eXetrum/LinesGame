@@ -13,12 +13,16 @@ namespace LinesGame.Model
 {
     public class Field : INotifyPropertyChanged
     {
+        // Количество строк
         private int rows;
+        // Количество столбцов
         private int columns;
+        // Коллекция ячеек (описываем поле в виде списка)
         private ObservableCollection<Cell> field;
-
+        // Конструктор объекта поле
         public Field(int rows, int columns)
         {
+            // Запоминаем количество строк/столбцов
             this.rows = rows;
             this.columns = columns;
             // Ячейки складываем в коллекцию которая генерирует событие PropertyChanged при изменении объектов внутри себя
@@ -35,9 +39,12 @@ namespace LinesGame.Model
         // Построить поле на основе другого поля
         public Field(Field thatField)
         {
+            // Скопировали значения сторок/столбцов
             this.rows = thatField.rows;
             this.columns = thatField.columns;
+            // Создали пустую коллекцию ячеек
             field = new ObservableCollection<Cell>();
+            // Копируем ячейки
             for (int i = 0; i < rows; ++i)
             {
                 for (int j = 0; j < columns; ++j)
@@ -45,7 +52,6 @@ namespace LinesGame.Model
                     field.Add(new Cell()
                     {
                         CellColor = thatField[i * columns + j].CellColor,
-                        //ContainBall = thatField[i * columns + j].ContainBall,
                         Selected = thatField[i * columns + j].Selected,
                         ID = thatField[i * columns + j].ID
                     });
@@ -53,7 +59,7 @@ namespace LinesGame.Model
             }
 
         }
-
+        // Доступ к ячейке по индексу Field[]
         public Cell this[int index]
         {
             get
@@ -63,15 +69,9 @@ namespace LinesGame.Model
             set
             {
                 field[index] = value;
-                //if (PropertyChanged != null)
-                //{
-                //    MessageBox.Show("cell changed");
-                //    PropertyChanged(this, new PropertyChangedEventArgs(Binding.IndexerName));
-                //}
-                //OnPropertyChanged("Cell[" + i + ", " + j + "]");
             }
         }
-
+        // Обмен ячеек местами
         public bool SwapCells(int leftIndex, int rightIndex)
         {
             int i1 = leftIndex / columns;
@@ -79,49 +79,34 @@ namespace LinesGame.Model
 
             int i2 = rightIndex / columns;
             int j2 = rightIndex - i2 * columns;
-
+            // Проверим чтобы переещение было возможно (только соседние сверху/снизу и слева/справа)
             if (Math.Abs(i1 - i2) > 1 || Math.Abs(j1 - j2) > 1 || (Math.Abs(i1 - i2) == 1 && Math.Abs(j1 - j2) == 1)) return false;
             // Если цвет шаров одинаков - нет смысла менять местами
             if (field[leftIndex].CellColor == field[rightIndex].CellColor)
             {
                 return false;
             }
-
-            //bool ContainBallTemp = field[leftIndex].ContainBall;
-            //bool SelectedTemp = field[leftIndex].Selected;
+            // Меняем местами (нужно поменять местами только цвет ячейки)
             Color CellColorTemp = field[leftIndex].CellColor;
-
-            //field[leftIndex].ContainBall = field[rightIndex].ContainBall;
-            //field[leftIndex].Selected = field[rightIndex].Selected;
             field[leftIndex].CellColor = field[rightIndex].CellColor;
-
-            //field[rightIndex].ContainBall = ContainBallTemp;
-            //field[rightIndex].Selected = SelectedTemp;
             field[rightIndex].CellColor = CellColorTemp;
-
+            // Снимаем выделение с обеих ячеек
             field[leftIndex].Selected = false;
             field[rightIndex].Selected = false;
-
-
+            // Обмен успешен
             return true;
         }
-
-        public void ToggleCell(int i, int j)
-        {
-            field[i * columns + j].Toggle();
-            //OnPropertyChanged("toggle Cell[" + i + ", " + j + "]");
-        }
-
+        // Доступ к полю количества строк
         public int Rows
         {
             get { return rows; }
         }
-
+        // Доступ к полю количества столбцов
         public int Columns
         {
             get { return columns; }
         }
-
+        // Реализация интерфейса INotifyPropertyChanged
         protected virtual void OnPropertyChanged(string propertyName)
         {
             if (PropertyChanged != null)
@@ -129,7 +114,6 @@ namespace LinesGame.Model
                 PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
             }
         }
-
         public event PropertyChangedEventHandler PropertyChanged;
     }
 }

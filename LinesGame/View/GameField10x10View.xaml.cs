@@ -21,42 +21,30 @@ namespace LinesGame.View
     /// </summary>
     public partial class GameField10x10View : Window
     {
-        public GameField10x10View(GameSetupViewModel setupViewModel)
+        public GameField10x10View()
         {
             InitializeComponent();
-            DataContext = new GameFieldViewModel(setupViewModel.GameSetupModel);
+            GameFieldViewModel vm = new GameFieldViewModel();
+            vm.OnShowSummary += vm_OnShowSummary;
+            DataContext = vm;
         }
 
-        private void GridLeftButtonDown(object sender, MouseButtonEventArgs e)
+        void vm_OnShowSummary(GameFieldViewModel vm)
         {
-            if (sender == null) return;
-            Grid myGrid = sender as Grid;
-            var point = Mouse.GetPosition(myGrid);
-
-            int row = 0;
-            int col = 0;
-            double accumulatedHeight = 0.0;
-            double accumulatedWidth = 0.0;
-
-            // calc row mouse was over
-            foreach (var rowDefinition in myGrid.RowDefinitions)
+            // У родительского окна меняем лейбл на кнопке запускающей новую игру
+            object btn = Owner.FindName("newGameBtn");
+            if (btn != null && btn as Button != null)
             {
-                accumulatedHeight += rowDefinition.ActualHeight;
-                if (accumulatedHeight >= point.Y)
-                    break;
-                row++;
+                (btn as Button).Content = "Новая игра";
             }
+            GameSummaryView gameSummary = new GameSummaryView(vm);
+            gameSummary.Owner = this;
+            gameSummary.WindowStartupLocation = System.Windows.WindowStartupLocation.CenterOwner;
+            gameSummary.ShowDialog();
+            // Показываем родительское окно
+            Owner.Show();
 
-            // calc col mouse was over
-            foreach (var columnDefinition in myGrid.ColumnDefinitions)
-            {
-                accumulatedWidth += columnDefinition.ActualWidth;
-                if (accumulatedWidth >= point.X)
-                    break;
-                col++;
-            }
-
-            MessageBox.Show(row.ToString() + " " + col.ToString());
+            if(vm.CallClose) this.Close();
         }
 
         private void Timeline_Completed(object sender, EventArgs e)
@@ -71,13 +59,36 @@ namespace LinesGame.View
             else if (vm.Game.FillEmptyRequire())
             {
                 vm.Game.FillEmptyCells();
-                vm.Game.ChekField();
                 Console.WriteLine("fill empty cells require");
             }
             else
             {
-                Console.WriteLine("nothing require");
+                vm.Game.CheckField();
+                //Console.WriteLine("check field require");
             }
+        }
+
+        private void GameFieldWin10x10_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key != Key.Escape) return;
+            GameFieldViewModel vm = DataContext as GameFieldViewModel;
+            vm.BackToMenuCommand.Execute(null);
+
+            this.Hide();
+            Owner.Show();            
+            e.Handled = true;
+        }
+        // При закрытии окна
+        private void GameField_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            GameFieldViewModel vm = DataContext as GameFieldViewModel;
+            vm.StopCommand.Execute(1);
+        }
+
+        private void backToMenuBtn_Click(object sender, RoutedEventArgs e)
+        {
+            this.Hide();
+            Owner.Show();
         }
     }
 }

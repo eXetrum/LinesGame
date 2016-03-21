@@ -54,12 +54,9 @@ namespace LinesGame.Convertors
                 result.GradientStops.Add(start);
                 result.GradientStops.Add(stop);
 
-                //return brush;
                 return result;
             }
-            //return new SolidColorBrush(color);// value;
             return value;
-            // date.ToShortDateString();
         }
 
         public override object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

@@ -26,13 +26,12 @@ namespace LinesGame.View
 
         private void applyBtn_Click(object sender, RoutedEventArgs e)
         {
-            Properties.Settings.Default.Save();
             Close();
         }
 
-        private void cancelBtn_Click(object sender, RoutedEventArgs e)
+        private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            Close();
+            Properties.Settings.Default.Save();
         }
     }
 }

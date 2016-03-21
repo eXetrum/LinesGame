@@ -29,25 +29,35 @@ namespace LinesGame.View
 
         private void newGameBtn_Click(object sender, RoutedEventArgs e)
         {
-            GameSetupView gameSetupView = new GameSetupView();
-            gameSetupView.Owner = this;
-            gameSetupView.WindowStartupLocation = System.Windows.WindowStartupLocation.CenterOwner;
-            //gameSetupView.DataContext = new GameSetupViewModel();
-            gameSetupView.ShowDialog();
-            //GameField10x10 field = new GameField10x10();
-            //field.Owner = this;
-            //field.Show();
+            Window gameWindow = null;
+            foreach (Window w in this.OwnedWindows)
+            {
+                if (w.Name.Equals("GameField"))
+                {
+                    gameWindow = w;
+                    break;
+                }
+            }
 
+            if (gameWindow == null)
+            {
+                GameSetupView gameSetupView = new GameSetupView();
+                gameSetupView.Owner = this;
+                gameSetupView.WindowStartupLocation = System.Windows.WindowStartupLocation.CenterOwner;
+                gameSetupView.ShowDialog();
+                return;
+            }
+
+            gameWindow.Show();
+            this.Hide();
         }
 
-        private void loadGameBtn_Click(object sender, RoutedEventArgs e)
+        private void scoreGameBtn_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show("not implemented");
-        }
-
-        private void saveGameBtn_Click(object sender, RoutedEventArgs e)
-        {
-            MessageBox.Show("not implemented");
+            RecordsTableView table = new RecordsTableView();
+            table.Owner = this;
+            table.WindowStartupLocation = System.Windows.WindowStartupLocation.CenterOwner;
+            table.ShowDialog();
         }
 
         private void settingsGameBtn_Click(object sender, RoutedEventArgs e)
@@ -60,12 +70,46 @@ namespace LinesGame.View
 
         private void rulesGameBtn_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show("not implemented");
+            GameRulesView gameRulesView = new GameRulesView();
+            gameRulesView.Owner = this;
+            gameRulesView.ShowDialog();
         }
 
         private void exitBtn_Click(object sender, RoutedEventArgs e)
         {
             Close();
+        }
+
+        private void Window_KeyDown(object sender, KeyEventArgs e)
+        {
+            Console.WriteLine("keydown");
+            if (e.Key != Key.Escape)
+            {
+                e.Handled = true;
+                return;
+            }
+            Window gameWindow = null;
+            foreach (Window w in this.OwnedWindows)
+            {
+                if (w.Name.Equals("GameField"))
+                {
+                    gameWindow = w;
+                    break;
+                }
+            }
+
+            if (gameWindow != null && e.Key == Key.Escape)
+            {
+                Console.WriteLine("GameFiled window found !");
+                this.Hide();
+                gameWindow.Show();
+                gameWindow.Activate();
+            }
+            else
+            {
+                Console.WriteLine("GameFiled window not found");
+            }            
+            e.Handled = true;
         }
     }
 }

@@ -1,13 +1,15 @@
-﻿<Window x:Name="GameFieldWin10x10" x:Class="LinesGame.View.GameField10x10View"
+﻿<Window x:Name="GameField" x:Class="LinesGame.View.GameField10x10View"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:p="clr-namespace:LinesGame.Properties"
         xmlns:converters="clr-namespace:LinesGame.Convertors"
-        Title="GameField" Height="600" Width="740" >
+        Title="GameField" Height="600" Width="780" KeyDown="GameFieldWin10x10_KeyDown" Closing="GameField_Closing" ResizeMode="NoResize">
 
     <Window.Resources>
         <converters:ContainBallToColor x:Key="ContainBallToColor" />
         <converters:SelectToColor x:Key="SelectToColor" />
-        <converters:BoolToLabel x:Key="BoolToLabel" />
+        <converters:GameStatusToLabel x:Key="GameStatusToLabel" />
+        <converters:GameTypeToLabel x:Key="GameTypeToLabel" />
     </Window.Resources>
 
     <Grid 
@@ -16,7 +18,7 @@
         Height="500" Width="500"
         Margin="30, 30" 
         Background="#FFF1F5F5" 
-        ShowGridLines="False" MouseLeftButtonDown="GridLeftButtonDown">
+        ShowGridLines="False">
 
         <Grid.RowDefinitions>
             <RowDefinition Height="50"/>
@@ -3864,28 +3866,28 @@
         </Button>
 
 
-
-
-
-
-
-
-
-
-        <GroupBox Grid.Column="9" Header="Статистика игры" HorizontalAlignment="Left" Margin="60,0,-197,0" VerticalAlignment="Top" Width="187" Height="399" Grid.RowSpan="8">
-            <Grid HorizontalAlignment="Left" Height="377" VerticalAlignment="Top" Width="177" Margin="0,0,-2,0">
+        <GroupBox Grid.Column="9" Header="Статистика игры" HorizontalAlignment="Left" Margin="60,0,-229,0" Width="219" Grid.RowSpan="7" Height="350" VerticalAlignment="Top">
+            <Grid Margin="0,0,-2,0">
                 <Label Content="Время:" HorizontalAlignment="Left" Margin="0,10,0,0" VerticalAlignment="Top" Width="82"/>
-                <Label Content="{Binding Path=Game.Score.GameTime, StringFormat={}{0:hh\:mm}}" HorizontalAlignment="Right" Margin="0,10,0,0" VerticalAlignment="Top" Width="80" Height="26" />
-                <Label Content="Сделано ходов" HorizontalAlignment="Left" Margin="0,41,0,0" VerticalAlignment="Top" Width="93"/>
-                <Label Content="{Binding Path=Game.Score.MovesCount}" HorizontalAlignment="Right" Margin="0,41,0,0" VerticalAlignment="Top" Width="80" Height="26"/>                
-                <Label Content="Очки:" HorizontalAlignment="Left" Margin="0,72,0,0" VerticalAlignment="Top" Width="52"/>                
-                <Label Content="{Binding Path=Game.Score.Score}" HorizontalAlignment="Right" Margin="0,72,0,0" VerticalAlignment="Top" Width="80" Height="26"/>
+                <Label Content="{Binding Path=Game.ElapsedTime, StringFormat={}{0:hh\:mm}}" HorizontalAlignment="Right" Margin="0,10,0,0" VerticalAlignment="Top" Width="65" Height="26" />
+                <Label Content="Сделано ходов:" HorizontalAlignment="Left" Margin="0,50,0,0" VerticalAlignment="Top" Width="93"/>
+                <Label Content="{Binding Path=Game._GameScore.ElapsedMoves}" HorizontalAlignment="Right" Margin="0,50,0,0" VerticalAlignment="Top" Width="65" Height="26"/>
+                <Label Content="Максимальное комбо:" HorizontalAlignment="Left" Margin="0,90,0,0" VerticalAlignment="Top" RenderTransformOrigin="0.632,3.115"/>
+                <Label Content="{Binding Path=Game._GameScore.MaxCombo}" HorizontalAlignment="Left" Margin="144,90,0,0" VerticalAlignment="Top" Width="65" Height="26"/>
+                
+                <Label Content="Очки:" HorizontalAlignment="Left" Margin="0,130,0,0" VerticalAlignment="Top" Width="52"/>                
+                <Label Content="{Binding Path=Game._GameScore.Score}" HorizontalAlignment="Right" Margin="0,130,0,0" VerticalAlignment="Top" Width="65" Height="26"/>
+                <Label Content="Тип игры:" HorizontalAlignment="Left" Margin="-1,250,0,0" VerticalAlignment="Top"/>
+                <Label Content="{Binding Source={x:Static p:Settings.Default}, Path=GameType, Mode=OneTime, Converter={converters:GameTypeToLabel}, ConverterParameter='0'}" HorizontalAlignment="Left" Margin="63,250,0,0" VerticalAlignment="Top" Width="146"/>
+                <Label Content="{Binding Source={x:Static p:Settings.Default}, Path=GameType, Mode=OneTime, Converter={converters:GameTypeToLabel}, ConverterParameter='1'}" HorizontalAlignment="Left" Margin="0,290,0,0" VerticalAlignment="Top" Width="117"/>
+                <Label Content="{Binding Path=Game.Remained, Mode=OneWay}" HorizontalAlignment="Left"  VerticalAlignment="Top" Width="65" Margin="140,290,0,0" Height="24"/>
                 
             </Grid>
         </GroupBox>
-        <Button x:Name="pauseBtn" Command="{Binding Path=PauseResumeCommand}" Content="{Binding GameRunning, Converter={converters:BoolToLabel}}" Grid.Column="9" HorizontalAlignment="Center" Margin="80,10,-150,0" Grid.Row="8" VerticalAlignment="Top" Width="120" Height="32" >
+        <Button x:Name="pauseBtn" Command="{Binding Path=StartPauseResumeCommand}" Content="{Binding Game._GameStatus, Converter={converters:GameStatusToLabel}}" Grid.Column="9" HorizontalAlignment="Center" Margin="110,18,-180,0" Grid.Row="7" VerticalAlignment="Top" Width="120" Height="32" >
         </Button>
-        <Button x:Name="stopGameBtn" Command="{Binding Path=StopCommand}" Content="Завершить игру" Grid.Column="9" HorizontalAlignment="Center" Margin="80,8,-150,0" Grid.Row="9" VerticalAlignment="Top" Width="120" Height="32" />
+        <Button x:Name="stopGameBtn" Command="{Binding Path=StopCommand}" Content="Завершить игру" Grid.Column="9" HorizontalAlignment="Center" Margin="110,18,-180,0" Grid.Row="8" VerticalAlignment="Top" Width="120" Height="32" />
+        <Button Name="backToMenuBtn" Command="{Binding Path=BackToMenuCommand}" Content="Назад в меню" Grid.Column="9" HorizontalAlignment="Left" Margin="110,18,-180,0" Grid.Row="9" VerticalAlignment="Top" Width="120" Height="32" Click="backToMenuBtn_Click"/>
 
 
     </Grid>

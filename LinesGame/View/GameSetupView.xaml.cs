@@ -25,24 +25,42 @@ namespace LinesGame.View
         public GameSetupView()
         {
             InitializeComponent();
-            DataContext = new GameSetupViewModel();
         }
 
         private void startBtn_Click(object sender, RoutedEventArgs e)
         {
-            GameSetupViewModel gameSetupViewModel = DataContext as GameSetupViewModel;
-
-            GameField10x10View gameView = new GameField10x10View(gameSetupViewModel);
-
+            Settings.Default.Save();
+            Window gameView = null;
+            // Создаем окно отображения поля 
+            switch (Settings.Default.Field)
+            {
+                case Model.Utils.FieldType.Field20x20:
+                    gameView = new GameField20x20View();
+                    break;
+                case Model.Utils.FieldType.Field17x19:
+                    gameView = new GameField17x19View();
+                    break;
+                default:
+                    gameView = new GameField10x10View();
+                    break;
+            }
+            gameView.Owner = this.Owner;
+            // Показываем окно
             gameView.Show();
 
-            Owner.Close();
+            object btn = Owner.FindName("newGameBtn");
+            if (btn != null && btn as Button != null)
+            {
+                (btn as Button).Content = "Назад к игре";
+            }
+
+            Owner.Hide();
             Close();            
         }
 
         private void cancelBtn_Click(object sender, RoutedEventArgs e)
         {
-            Settings.Default.Save();
+            
 
             Close();
         }
